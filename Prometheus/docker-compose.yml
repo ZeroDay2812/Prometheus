@@ -10,6 +10,8 @@ services:
       - /prometheus:/etc/prometheus
       - prometheus-data:/prometheus
     command: --web.enable-lifecycle  --config.file=/etc/prometheus/prometheus.yml
+    network_mode: "host"
+    privileged: "true"
 
   grafana:
     image: grafana/grafana:latest
@@ -20,6 +22,8 @@ services:
     restart: always
     depends_on:
     - prometheus
+    network_mode: "host"
+    privileged: "true"
 
 
   alertmanager:
@@ -32,6 +36,8 @@ services:
     - --storage.path=/alertmanager
     volumes:
     - /prometheus/alertmanager:/etc/alertmanager/
+    network_mode: "host"
+    privileged: "true"
 
   haproxy:
     container_name: haproxy
@@ -49,9 +55,8 @@ services:
     - /prometheus/keepalived/keepalived.conf:/usr/local/etc/keepalived/keepalived.conf:ro
     - /etc/localtime:/etc/localtime:ro
     - /lib/modules:/lib/modules:ro
-    - haproxy_socket:/haproxy-sock:ro
-    networks:
-      - host
+    #- haproxy_socket:/haproxy-sock:ro
+    network_mode: "host"
     privileged: "true"
     
 volumes:
