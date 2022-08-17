@@ -1,0 +1,59 @@
+version: '3'
+
+services:
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - 9090:9090
+    restart: always
+    volumes:
+      - /prometheus:/etc/prometheus
+      - prometheus-data:/prometheus
+    command: --web.enable-lifecycle  --config.file=/etc/prometheus/prometheus.yml
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+    - 3000:3000
+    volumes:
+    - /prometheus/data:/var/lib/grafana
+    restart: always
+    depends_on:
+    - prometheus
+
+
+  alertmanager:
+    image: prom/alertmanager:latest
+    restart: always
+    ports:
+    - 9093:9093
+    command:
+    - --config.file=/etc/alertmanager/config.yml
+    - --storage.path=/alertmanager
+    volumes:
+    - /prometheus/alertmanager:/etc/alertmanager/
+
+  haproxy:
+    container_name: haproxy
+    image: haproxytech/haproxy-alpine:2.4
+    volumes:
+    - /prometheus/haproxy/haproxy.cfg:/usr/local/etc/haproxy/haproxy:ro
+    - haproxy_socket:/haproxy-sock:ro
+    network_mode: "host"
+    privileged: "true"
+
+  keepalived:
+    container_name: keepalived
+    image: osixia/keepalived:2.0.20
+    volumes:
+    - /prometheus/keepalived/keepalived.conf:/usr/local/etc/keepalived/keepalived.conf:ro
+    - /etc/localtime:/etc/localtime:ro
+    - /lib/modules:/lib/modules:ro
+    - haproxy_socket:/haproxy-sock:ro
+    networks:
+      - host
+    privileged: "true"
+    
+volumes:
+  prometheus-data:
+
