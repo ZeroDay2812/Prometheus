@@ -44,7 +44,7 @@ services:
     image: haproxytech/haproxy-alpine:2.4
     volumes:
     - /prometheus/haproxy/haproxy.cfg:/usr/local/etc/haproxy/haproxy:ro
-    - haproxy_socket:/haproxy-sock:ro
+    #- haproxy_socket:/haproxy-sock:ro
     network_mode: "host"
     privileged: "true"
 
