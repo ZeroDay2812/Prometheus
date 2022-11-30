@@ -1,16 +1,24 @@
 global:
-  scrape_interval: 30s
-  scrape_timeout: 10s
+  scrape_interval: 60s
+  scrape_timeout: 30s
+
+
+
+alerting:
+  alertmanagers:
+  - static_configs:
+      - targets:
+          - "172.16.0.98:9093"
 
 rule_files:
-  - alert.yml
+  - "alert.yml"
 
 scrape_configs:
   - job_name: services
     metrics_path: /metrics
     static_configs:
       - targets:
-          - '172.16.68.150:9090'
+          - '172.16.0.98:9090'
 
 
   - job_name: 'prometheus'
@@ -20,21 +28,123 @@ scrape_configs:
     static_configs:
       - targets: ['localhost:9090']
 
-  - job_name: 'node_exporter'
-
-    # Override the global default and scrape targets from this job every 5 seconds.
-    #scrape_interval: 5s
+  - job_name: 'cisco_switch'
+    scrape_interval: 300s
+    scrape_timeout: 270s
     static_configs:
-      - targets: [
-        '172.16.68.150:9100',
-        '172.16.68.153:9100'
-        ]
+      - targets: ['172.16.99.2']
+        labels:
+         hostname: 3850-STACK
+         device: cisco
+      - targets: ['172.16.99.12']
+        labels:
+         hostname: SW-ACCESS-2FL
+         device: cisco
+      - targets: ['172.16.99.13']
+        labels:
+         hostname: SW-ACCESS-3FL
+         device: cisco
+      - targets: ['172.16.99.14']
+        labels:
+         hostname: SW-ACCESS-4FL
+         device: cisco
+      - targets: ['172.16.99.15']
+        labels:
+         hostname: SW-ACCESS-5FL
+         device: cisco
+
+    metrics_path: /snmp
+    params:
+      module: [cisco]
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: 172.16.0.98:9116
+
+  - job_name: 'server_hardware_monitor'
+    scrape_interval: 300s
+    scrape_timeout: 270s
+    static_configs:
+
+      - targets: ['172.16.0.56']
+        labels:
+         hostname: host_04
+         device: HPE
+         job: 'monitor_hardware'
+
+      - targets: ['172.16.0.52']
+        labels:
+         hostname: host_01
+         device: HPE
+         job: 'monitor_hardware'
+
+      - targets: ['172.16.0.53']
+        labels:
+         hostname: host_02
+         device: HPE
+         job: 'monitor_hardware'
+
+    metrics_path: /snmp
+    params:
+      module: [hpe_server]
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: 172.16.0.98:9116
+
+  - job_name: 'fortigate_fw'
+    scrape_interval: 300s
+    scrape_timeout: 270s
+    static_configs:
+
+      - targets: ['172.16.99.1']
+        labels:
+         hostname: Firewall_HO
+         device: Fortigate
+         job: 'firewall'
+
+      - targets: ['172.16.50.1']
+        labels:
+         hostname: Firewall_HCM
+         device: Fortigate
+         job: 'firewall'
+
+    metrics_path: /snmp
+    params:
+      module: [fortigate_snmp]
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: 172.16.0.98:9116
+
+
+
 
   - job_name: 'wmi_exporter'
 
     # Override the global default and scrape targets from this job every 5 seconds.
-    #scrape_interval: 5s
+    scrape_interval: 30s
     static_configs:
       - targets: [
-        '172.16.68.81:9182'
+         '172.16.0.6:9182',
+         '172.16.20.65:9182',
+         '172.16.0.30:9182',
+         '172.16.0.6:9182',
+         '172.16.0.7:9182',
+         '172.16.0.16:9182',
+         '172.16.0.9:9182',
+         '172.16.0.59:9182',
+         '172.16.0.60:9182',
+         '172.16.0.61:9182',
+         '172.16.20.64:9182'
         ]
+        
