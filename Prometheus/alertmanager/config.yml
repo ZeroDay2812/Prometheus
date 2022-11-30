@@ -1,17 +1,25 @@
 global:
- resolve_timeout: 1m
+  resolve_timeout: 5m
 
 route:
- receiver: 'email-notifications'
-
+  group_by: ['alertname']
+  group_wait: 300s
+  group_interval: 300s
+  repeat_interval: 300s
+  receiver: 'email'
 receivers:
-- name: 'email-notifications'
+- name: 'email'
   email_configs:
-  - to: servicedeskcmcts@gmail.com
-    from: servicedeskcmcts@gmail.com
-    smarthost: smtp.gmail.com:587
-    auth_username: servicedeskcmcts@gmail.com
-    auth_identity: servicedeskcmcts@gmail.com
-    auth_password: Viettel@123
-    send_resolved: true
-    require_tls: false
+  - to: 'vmkhue@cmc.com.vn'
+    from: 'vmkhue@cmc.com.vn'
+    smarthost: smtp.office365.com:587
+    auth_username: 'vmkhue@cmc.com.vn'
+    auth_identity: 'vmkhue@cmc.com.vn'
+    auth_password: 'Cts@2022'
+inhibit_rules:
+  - source_match:
+      severity: 'critical'
+    target_match:
+      severity: 'warning'
+    equal: ['alertname', 'dev', 'instance']
+
