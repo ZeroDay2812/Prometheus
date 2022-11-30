@@ -11,7 +11,7 @@ groups:
         labels:
           severity: critical
         annotations:
-          summary: Windows Server collector Error (instance {{ $labels.instance }})            
+          summary: Windows Server collector Error (instance {{ $labels.instance }})
           description: "Collector {{ $labels.collector }} was not successful\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
 
       - alert: WindowsServerServiceStatus
@@ -43,7 +43,7 @@ groups:
           description: "Memory usage is more than 90%\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
 
       - alert: WindowsServerDiskSpaceUsage
-        expr: 100.0 - 100 * ((windows_logical_disk_free_bytes / 1024 / 1024 ) / (windows_logical_disk_size_bytes / 1024 / 1024)) > 80
+        expr: 100.0 - 100 * ((windows_logical_disk_free_bytes / 1024 / 1024 ) / (windows_logical_disk_size_bytes / 1024 / 1024)) > 90
         for: 2m
         labels:
           severity: critical
@@ -53,15 +53,6 @@ groups:
 
   - name: LinuxAlerts
     rules:
-      - alert: InstanceDown
-        expr: up == 0
-        for: 1m
-        annotations:
-          summary: 'Instance {{ $labels.instance }} down'
-          description: '{{ $labels.instance }} of job {{ $labels.job }} has been down for more than 1 minute.'
-        labels:
-          severity: critical
-
       - alert: HostOutOfMemory
         expr: node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes * 100 < 10
         for: 2m
@@ -70,7 +61,7 @@ groups:
         annotations:
           summary: Host out of memory (instance {{ $labels.instance }})
           description: "Node memory is filling up (< 10% left)\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
-      
+
       - alert: HostMemoryUnderMemoryPressure
         expr: rate(node_vmstat_pgmajfault[1m]) > 1000
         for: 2m
@@ -115,7 +106,7 @@ groups:
         annotations:
           summary: Host unusual disk write rate (instance {{ $labels.instance }})
           description: "Disk is probably writing too much data (> 50 MB/s)\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
-      
+
       - alert: HostOutOfDiskSpace
         expr: (node_filesystem_avail_bytes * 100) / node_filesystem_size_bytes < 10 and ON (instance, device, mountpoint) node_filesystem_readonly == 0
         for: 2m
@@ -223,3 +214,148 @@ groups:
         annotations:
           summary: Host Network Bond Degraded (instance {{ $labels.instance }})
           description: "Bond \"{{ $labels.device }}\" degraded on \"{{ $labels.instance }}\".\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+
+  - name: SNMP Hpe server
+    rules:
+    - alert: snmp_server_timeout
+      expr: avg_over_time(up{job="monitor_hardware"}[30m]) < 0.5
+      for: 20m
+      labels:
+        group: v_hardware
+        type: device
+        severity: critical
+      annotations:
+        summary: "SNMP timeout"
+        description: "Server {{ $labels.instance }} of job {{ $labels.job }} has been query timeout"
+        value: "{{ $value }}"
+
+    - alert: snmp_hpe_physical_disk_failed
+      expr: cpqDaPhyDrvLocationString{job="monitor_hardware"} *on(cpqDaPhyDrvIndex,instance) group_left() (cpqDaPhyDrvStatus != 2)
+      for: 5m
+      labels:
+        group: v_hardware
+        type: device
+        severity: critical
+      annotations:
+        summary: "Server physical disk failed"
+        description: "Physical Disk {{ $labels.cpqDaPhyDrvLocationString }} on Hpe server {{ $labels.instance }} has been failed"
+        value: "{{ $value }}"
+
+    - alert: snmp_hpe_memory_failed
+      expr: cpqHeResMem2ModuleHwLocation{job="monitor_hardware"} *on(cpqHeResMem2Module,instance) group_left() (cpqHeResMem2ModuleStatus != 2 and cpqHeResMem2ModuleStatus != 4 and cpqHeResMem2ModuleStatus != 1)
+      for: 5m
+      labels:
+        group: v_hardware
+        type: device
+        severity: critical
+      annotations:
+        summary: "Server memory failed"
+        description: "Memory {{ $labels.cpqHeResMem2ModuleHwLocation }} on Hpe server {{ $labels.instance }} has been failed"
+        value: "{{ $value }}"
+
+    - alert: snmp_hpe_power_failed
+      expr: cpqHeFltTolPowerSupplySerialNumber{job="monitor_hardware"} *on(cpqHeFltTolPowerSupplyBay,instance) group_left()(cpqHeFltTolPowerSupplyStatus != 1)
+      for: 5m
+      labels:
+        group: v_hardware
+        type: device
+        severity: critical
+      annotations:
+        summary: "Server power failed"
+        description: "Power {{ $labels.cpqHeFltTolPowerSupplySerialNumber }} on Hpe server {{ $labels.instance }} has been failed"
+        value: "{{ $value }}"
+
+    - alert: snmp_hpe_CPU_failed
+      expr: cpqSeCpuName{job="monitor_hardware"} *on(cpqSeCpuUnitIndex,instance) group_left() (cpqSeCpuStatus != 2)
+      for: 5m
+      labels:
+        group: v_hardware
+        type: device
+        severity: critical
+      annotations:
+        summary: "Server cpu failed"
+        description: "CPU {{ $labels.cpqSeCpuName }} on Hpe server {{ $labels.instance }} has been failed"
+        value: "{{ $value }}"
+
+    - alert: snmp_hpe_CRC_failed
+      expr: cpqNicIfPhysAdapterName{job="monitor_hardware"} *on(cpqNicIfPhysAdapterIndex,instance) group_left() (delta(cpqNicIfPhysAdapterFCSErrors[5m]) > 150)
+      for: 5m
+      labels:
+        group: v_hardware
+        type: device
+        severity: critical
+      annotations:
+        summary: "Server CRC failed"
+        description: "Port {{ $labels.cpqNicIfPhysAdapterName }} on Hpe server {{ $labels.instance }} has CRC errors"
+        value: "{{ $value }}"
+
+    - alert: snmp_hpe_temperature_sensor_failed
+      expr: cpqHeTemperatureCondition{job="monitor_hardware"} != 2
+      for: 5m
+      labels:
+        group: v_hardware
+        type: device
+        severity: critical
+      annotations:
+        summary: "Server temperature sensor failed"
+        description: "Temperature sensor chassis {{ $labels.cpqHeTemperatureChassis }}-{{ $labels.cpqHeTemperatureIndex }} on Hpe server {{ $labels.instance }} has been failed"
+        value: "{{ $value }}"
+
+    - alert: snmp_hpe_fan_failed
+      expr: (cpqHeFltTolFanCondition{job="monitor_hardware"} != 2) and (cpqHeFltTolFanCondition{job="monitor_hardware"} != 1)
+      for: 5m
+      labels:
+        group: v_hardware
+        type: device
+        severity: critical
+      annotations:
+        summary: "Server fan failed"
+        description: "Fan on Hpe server {{ $labels.instance }} has been failed"
+        value: "{{ $value }}"
+
+  - name: SNMP cisco switch
+    rules:
+    - alert: snmp_switch_timeout
+      expr: avg_over_time(up{job="cisco_switch"}[30m]) < 0.5
+      for: 20m
+      labels:
+        group: v_hardware
+        type: device
+        severity: critical
+      annotations:
+        summary: "SNMP timeout"
+        description: "Switch {{ $labels.instance }} of job {{ $labels.job }} has been query timeout"
+        value: "{{ $value }}"
+
+    - alert: snmp_switch_interface_link_status_DOWN
+      expr: ifAdminStatus{job="cisco_switch"} == 2 and ifOperStatus{job="cisco_switch"} == 2
+      for: 5m
+      labels:
+        group: v_hardware
+        severity: critical
+      annotations:
+        summary: "Switch interface down"
+        description: "Interface {{ $labels.ifDescr }} on {{ $labels.instance }} has DOWN more than 2 minutes."
+        value: "{{ $value }}"
+
+    - alert: snmp_switch_high_CPU_load
+      expr: cpmCPUTotal5min{job="cisco_switch"} > 75
+      for: 5m
+      labels:
+        group: v_hardware
+        severity: critical
+      annotations:
+        summary: "Switch high CPU load "
+        description: "Switch {{ $labels.instance }} CPU load over 75%"
+        value: "{{ $value }}"
+
+    - alert: snmp_switch_high_memory
+      expr: 100 - (ciscoMemoryPoolFree{ciscoMemoryPoolType="1"}/(ciscoMemoryPoolFree{ciscoMemoryPoolType="1"} + ciscoMemoryPoolUsed{ciscoMemoryPoolType="1"})) * 100 > 75
+      for: 5m
+      labels:
+        group: v_hardware
+        severity: critical
+      annotations:
+        summary: "Switch high memory"
+        description: "Switch {{ $labels.instance }} memrory used over 75%  "
+        value: "{{ $value }}"
