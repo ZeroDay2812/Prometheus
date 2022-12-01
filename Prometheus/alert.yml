@@ -328,7 +328,7 @@ groups:
         value: "{{ $value }}"
 
     - alert: snmp_switch_interface_link_status_DOWN
-      expr: ifAdminStatus{job="cisco_switch"} == 2 and ifOperStatus{job="cisco_switch"} == 2
+      expr: (ifAdminStatus{device="cisco"}) *on(ifIndex,instance) group_left(ifAdminStatus) (ifAdminStatus == 2 and ifOperStatus == 2) and ifIndex{ifName!~"Vl1|Fa0"}
       for: 5m
       labels:
         group: v_hardware
